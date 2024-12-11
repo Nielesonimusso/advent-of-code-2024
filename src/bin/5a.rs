@@ -2,7 +2,7 @@ use advent_of_code_2024::input::get_lines;
 
 use once_cell;
 use regex;
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap};
 
 macro_rules! regex {
     ($re:literal $(,)?) => {{
@@ -33,46 +33,44 @@ fn parse_line(line: &String) -> Option<(u8, u8)> {
     }
 }
 
-fn insert_ordered_pair_into_rules(
-    pair: (u8, u8),
-    before_rules: &mut HashMap<u8, Vec<u8>>,
-    after_rules: &mut HashMap<u8, Vec<u8>>,
-) {
+fn insert_ordered_pair_into_rules(pair: (u8, u8), before_rules: &mut HashMap<u8, Vec<u8>>) {
     before_rules
         .entry(pair.1)
         .and_modify(|v| v.push(pair.0))
         .or_insert(vec![pair.0]);
-    after_rules
-        .entry(pair.0)
-        .and_modify(|v| v.push(pair.1))
-        .or_insert(vec![pair.1]);
 }
 
-fn comparator(
-    a: &u8,
-    b: &u8,
-    before_rules: &HashMap<u8, Vec<u8>>,
-    after_rules: &HashMap<u8, Vec<u8>>,
-) -> bool {
+fn comparator(a: &u8, b: &u8, before_rules: &HashMap<u8, Vec<u8>>) -> Ordering {
     match before_rules.get(b) {
-        Some(v) => v.contains(a),
-        None => match after_rules.get(a) {
-            Some(v) => !v.contains(b),
-            None => true,
+        Some(v) => {
+            if v.contains(a) {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        }
+        None => match before_rules.get(a) {
+            Some(v) => {
+                if v.contains(b) {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                }
+            }
+            None => Ordering::Equal,
         },
     }
 }
 
 fn main() {
     let mut before_rules: HashMap<u8, Vec<u8>> = HashMap::new();
-    let mut after_rules: HashMap<u8, Vec<u8>> = HashMap::new();
 
     let mut lines = get_lines(5);
 
     lines
         .by_ref()
         .map_while(|line_e| parse_line(&line_e.expect("No line!")))
-        .for_each(|pair| insert_ordered_pair_into_rules(pair, &mut before_rules, &mut after_rules));
+        .for_each(|pair| insert_ordered_pair_into_rules(pair, &mut before_rules));
 
     let mut middles_sum: u32 = 0;
 
@@ -82,7 +80,7 @@ fn main() {
             .split(',')
             .map(|e| e.parse().expect("Non-number update..!"))
             .collect();
-        if update.is_sorted_by(|a, b| comparator(a, b, &before_rules, &after_rules)) {
+        if update.is_sorted_by(|a, b| comparator(a, b, &before_rules) != Ordering::Greater) {
             middles_sum += update[(update.len() - 1) / 2] as u32;
         }
     }
