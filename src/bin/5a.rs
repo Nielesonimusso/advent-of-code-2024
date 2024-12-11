@@ -48,19 +48,19 @@ fn insert_ordered_pair_into_rules(
         .or_insert(vec![pair.1]);
 }
 
-fn check_update_correct(
-    update: &Vec<u8>,
+fn comparator(
+    a: &u8,
+    b: &u8,
     before_rules: &HashMap<u8, Vec<u8>>,
     after_rules: &HashMap<u8, Vec<u8>>,
 ) -> bool {
-    update.iter().enumerate().all(|(index, page)| {
-        !update[..index]
-            .iter()
-            .any(|before_page| after_rules[page].contains(before_page))
-            && !update[index + 1..]
-                .iter()
-                .any(|after_page| before_rules[page].contains(after_page))
-    })
+    match before_rules.get(b) {
+        Some(v) => v.contains(a),
+        None => match after_rules.get(a) {
+            Some(v) => !v.contains(b),
+            None => true,
+        },
+    }
 }
 
 fn main() {
@@ -82,8 +82,7 @@ fn main() {
             .split(',')
             .map(|e| e.parse().expect("Non-number update..!"))
             .collect();
-        let correct: bool = check_update_correct(&update, &before_rules, &after_rules);
-        if correct {
+        if update.is_sorted_by(|a, b| comparator(a, b, &before_rules, &after_rules)) {
             middles_sum += update[(update.len() - 1) / 2] as u32;
         }
     }
